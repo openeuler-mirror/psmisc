@@ -1,6 +1,6 @@
 Name: psmisc
-Version: 23.1
-Release: 5
+Version: 23.3
+Release: 1
 Summary: Utilities for managing processes on your system
 License: GPLv2+
 URL: https://gitlab.com/psmisc/psmisc
@@ -35,6 +35,12 @@ mv $RPM_BUILD_ROOT%{_bindir}/fuser $RPM_BUILD_ROOT%{_sbindir}
 %doc AUTHORS ChangeLog README
 
 %changelog
+* Fri Apr 17 2020 chenmingmin <chenmingmin@huawei.com> - 23.3-1
+- Type:enhancement
+- ID:NA
+- SUG:restart
+- DESC:upgrade to 23.3
+
 * Wed May 8 2019 xiashuang <xiashuang1@huawei.com> - 23.1-5
 - Type:bugfix
 - ID:NA
