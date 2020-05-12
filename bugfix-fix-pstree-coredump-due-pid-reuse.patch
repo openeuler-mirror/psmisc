@@ -1,31 +1,28 @@
-From 8677c615752235194f1a01925c9a591cdf8da821 Mon Sep 17 00:00:00 2001
-From: <XiaShuang1@huawei.com>
-Date: Wed, 8 May 2019 03:43:25 -0400
-Subject: [PATCH] fix pstree coredump due pid reuse
-
-From: huangkaibin <huangkaibin@huawei.com>
-sign_off_by: XiaShuang <xiashuang1@huawei.com>
-
-pstree scans /proc directory to construct tree of all processes.
-In scanning, if a pid or tid is already added to ps tree, and then exists,
-and it is reused by another process or thread, there will be a loop in ps tree,
-and will cause coredump in tree_equal function.
-An example step is as below.
+From 9eec9fc3cf7960157c42105343492a07f1039fce Mon Sep 17 00:00:00 2001
+From: chenmingmin <chenmingmin@huawei.com>
+Date: Fri, 17 Apr 2020 08:52:38 -0400
+Subject: [PATCH] pstree scans /proc directory to construct tree of all
+ processes. In scanning, if a pid or tid is already added to ps tree, and then
+ exists, and it is reused by another process or thread, there will be a loop
+ in ps tree, and will cause coredump in tree_equal function. An example step
+ is as below.
 1. process A added to ps tree
 2. process B added to ps tree as a child of Author
 3. B exists and its pid is reused by process C(with same pid as B)
-4. A exists and its pid is reused by process D(with same pid as A) as a child of process C
+4. A exists and its pid is reused by process D(with same pid as A) as a
+ child of process C
 5. hence, A(pid1)->B(pid2)->C(pid2)->D(pid1)->B(pid)->... loop is constructed
 This patch fix this problem by not adding processes with pid reused to ps tree.
+
 ---
- src/pstree.c | 108 ++++++++++++++++++++++++++++++++++++++---------------------
- 1 file changed, 70 insertions(+), 38 deletions(-)
+ src/pstree.c | 112 ++++++++++++++++++++++++++++++++-------------------
+ 1 file changed, 71 insertions(+), 41 deletions(-)
 
 diff --git a/src/pstree.c b/src/pstree.c
-index aaf3df7..b4880f8 100644
+index 99881e9..4212c8b 100644
 --- a/src/pstree.c
 +++ b/src/pstree.c
-@@ -119,6 +119,8 @@ typedef struct _proc {
+@@ -127,6 +127,8 @@ typedef struct _proc {
  #define PFLAG_HILIGHT   0x01
  #define PFLAG_THREAD    0x02
  
@@ -34,7 +31,7 @@ index aaf3df7..b4880f8 100644
  typedef struct _child {
      PROC *child;
      struct _child *next;
-@@ -574,15 +576,44 @@ rename_proc(PROC *this, const char *comm, uid_t uid)
+@@ -615,16 +617,44 @@ rename_proc(PROC *this, const char *comm, uid_t uid)
      }
  }
  
@@ -56,10 +53,10 @@ index aaf3df7..b4880f8 100644
 +    return ret;
 +}
 +
-+
 +static int
  add_proc(const char *comm, pid_t pid, pid_t ppid, pid_t pgid, uid_t uid,
-          const char *args, int size, char isthread, security_context_t scontext)
+          const char *args, int size, char isthread, security_context_t scontext,
+ 	 double process_age_sec)
  {
      PROC *this, *parent;
 +    if (!(parent = find_proc(ppid))) {
@@ -80,37 +77,38 @@ index aaf3df7..b4880f8 100644
          rename_proc(this, comm, uid);
      }
      if (args)
-@@ -592,13 +623,12 @@ add_proc(const char *comm, pid_t pid, pid_t ppid, pid_t pgid, uid_t uid,
-     this->pgid = pgid;
+@@ -635,13 +665,13 @@ add_proc(const char *comm, pid_t pid, pid_t ppid, pid_t pgid, uid_t uid,
+     this->age = process_age_sec;
      if (isthread)
        this->flags |= PFLAG_THREAD;
 -    if (!(parent = find_proc(ppid))) {
 -        parent = new_proc("?", ppid, 0, scontext);
 -    }
 -    if (pid != 0) {
-+    if (pid != 0 && !ISTHREAD(parent)) {
++
++      if (pid != 0 && !ISTHREAD(parent)) {
 +      /*thread can not have any children. this can happen when a tid is reused as a pid*/
        add_child(parent, this);
        this->parent = parent;
      }
-+  return 0;
++    return 0;
  }
  
  
-@@ -918,7 +948,7 @@ static void read_proc(void)
+@@ -993,7 +1023,7 @@ static void read_proc(void)
    char readbuf[BUFSIZ + 1];
    char *tmpptr, *endptr;
    pid_t pid, ppid, pgid;
 -  int fd, size;
-+  int fd, size, ret;
++  int fd, size,ret;
    int empty;
    security_context_t scontext = NULL;
- #ifdef WITH_SELINUX
-@@ -978,41 +1008,14 @@ static void read_proc(void)
-               struct dirent *dt;
+   unsigned long long proc_stt_jf = 0;
+@@ -1057,44 +1087,14 @@ static void read_proc(void)
                char *taskpath;
                int thread;
--
+ 
+-	      process_age_sec = process_age(proc_stt_jf);
 -              /* handle process threads */
 -              if (! hide_threads) {
 -                if (! (taskpath = malloc(strlen(path) + 10)))
@@ -126,10 +124,12 @@ index aaf3df7..b4880f8 100644
 -                        threadname = get_threadname(pid, thread, comm);
 -                        if (print_args)
 -                          add_proc(threadname, thread, pid, pgid, st.st_uid,
--                              threadname, strlen (threadname) + 1, 1,scontext);
+-                              threadname, strlen (threadname) + 1, 1,scontext,
+-			      process_age_sec);
 -                        else
 -                          add_proc(threadname, thread, pid, pgid, st.st_uid,
--                              NULL, 0, 1, scontext);
+-                              NULL, 0, 1, scontext,
+-			      process_age_sec);
 -                        free(threadname);
 -                      }
 -                    }
@@ -138,12 +138,13 @@ index aaf3df7..b4880f8 100644
 -                }
 -                free(taskpath);
 -              }
+-
 +              char cmdline[128];
- 
                /* handle process */
                if (!print_args)
--                add_proc(comm, pid, ppid, pgid, st.st_uid, NULL, 0, 0, scontext);
-+                ret = add_proc(comm, pid, ppid, pgid, st.st_uid, NULL, 0, 0, scontext);
+-                add_proc(comm, pid, ppid, pgid, st.st_uid, NULL, 0, 0, scontext,
++                 ret = add_proc(comm, pid, ppid, pgid, st.st_uid, NULL, 0, 0, scontext,
+ 			process_age_sec);
                else {
 -                sprintf(path, "%s/%d/cmdline", PROC_BASE, pid);
 -                if ((fd = open(path, O_RDONLY)) < 0) {
@@ -152,14 +153,15 @@ index aaf3df7..b4880f8 100644
            /* If this fails then the process is gone.  If a PID
  		   * was specified on the command-line then we might
  		   * not even be interested in the current process.
-@@ -1037,9 +1040,38 @@ static void read_proc(void)
+@@ -1119,9 +1119,39 @@ static void read_proc(void)
                    size--;
                  if (size)
                    buffer[size++] = 0;
 -                add_proc(comm, pid, ppid, pgid, st.st_uid,
 +                ret = add_proc(comm, pid, ppid, pgid, st.st_uid,
-                      buffer, size, 0, scontext);
+                      buffer, size, 0, scontext, process_age_sec);
                }
++
 +              if (ret >= 0) {/*do not add tids to ps tree when its parent process reuses pid/tid*/
 +                /* handle process threads */
 +                if (!hide_threads) {
@@ -176,10 +178,10 @@ index aaf3df7..b4880f8 100644
 +                          threadname = get_threadname(pid, thread, comm);
 +                          if (print_args)
 +                            add_proc(threadname, thread, pid, pgid, st.st_uid,
-+                                 threadname, strlen (threadname) + 1, 1,scontext);
++                                 threadname, strlen (threadname) + 1, 1,scontext,process_age_sec);
 +                          else
 +                            add_proc(threadname, thread, pid, pgid, st.st_uid,
-+                                 NULL, 0, 1, scontext);
++                                 NULL, 0, 1, scontext,process_age_sec);
 +                          free(threadname);
 +                        }
 +                      }
@@ -193,5 +195,4 @@ index aaf3df7..b4880f8 100644
            }
          }
 -- 
-1.8.3.1
-
+2.19.1
