@@ -1,0 +1,46 @@
+From 1ab3e9950f4c9cf749802a36e01249dde8e10c3b Mon Sep 17 00:00:00 2001
+From: Craig Small <csmall@dropbear.xyz>
+Date: Mon, 2 Mar 2020 22:16:26 +1100
+Subject: [PATCH 12/20] fuser: free local port before return
+
+parse_inet allocated a string using strdup() but didn't always
+release it.
+
+References:
+ Coverity #14401
+https://gitlab.com/psmisc/psmisc/-/commit/1ab3e9950f4c9cf749802a36e01249dde8e10c3b
+---
+ src/fuser.c | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/src/fuser.c b/src/fuser.c
+index ac8244a..bbcbed2 100644
+--- a/src/fuser.c
++++ b/src/fuser.c
+@@ -605,8 +605,10 @@ int parse_inet(struct names *this_name, struct ip_connections **ip_list)
+ 		     getaddrinfo(NULL, lcl_port_str, &hints, &res)) != 0) {
+ 			fprintf(stderr, _("Cannot resolve local port %s: %s\n"),
+ 				lcl_port_str, gai_strerror(errcode));
++			free(lcl_port_str);
+ 			return -1;
+ 		}
++		free(lcl_port_str);
+ 		if (res == NULL)
+ 			return -1;
+ 		switch (res->ai_family) {
+@@ -624,12 +626,10 @@ int parse_inet(struct names *this_name, struct ip_connections **ip_list)
+ 			fprintf(stderr, _("Unknown local port AF %d\n"),
+ 				res->ai_family);
+ 			freeaddrinfo(res);
+-            free(lcl_port_str);
+ 			return -1;
+ 		}
+ 		freeaddrinfo(res);
+ 	}
+-	free(lcl_port_str);
+ 	res = NULL;
+ 	if (rmt_addr_str == NULL && rmt_port_str == NULL) {
+ 		add_ip_conn(ip_list, protocol, this_name, ntohs(lcl_port), 0,
+-- 
+2.22.0.windows.1
+
