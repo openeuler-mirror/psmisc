@@ -1,0 +1,56 @@
+From b4566f854f29cad3d2249abcb7e472f5d3fbf169 Mon Sep 17 00:00:00 2001
+From: Craig Small <csmall@dropbear.xyz>
+Date: Tue, 27 Oct 2020 21:59:25 +1100
+Subject: [PATCH] fuser: Check pathname only on non-block devices
+
+The referenced commit we would check the pathname to
+ensure it matched our target. This worked fine for
+real files. However for block devices it would fail
+because "/dev/sda1" doesn't match "/mnt/myfile".
+
+We only check the pathname if the thing we are matching
+against is not a block file.
+
+Thanks to @MarsChan for the report and also the suggested
+fix!
+
+References:
+ commit 5c979b38253d187a8ecb8e52a0878b8bb668894f
+ psmisc/psmisc#31
+
+Signed-off-by: Craig Small <csmall@dropbear.xyz>
+---
+ ChangeLog   |  1 +
+ src/fuser.c | 16 +++++++++-------
+ 1 files changed, 9 insertions(+), 7 deletions(-)
+
+diff --git a/src/fuser.c b/src/fuser.c
+index 70da121..03e6237 100644
+--- a/src/fuser.c
++++ b/src/fuser.c
+@@ -1606,13 +1606,15 @@ check_dir(const pid_t pid, const char *dirname, struct device_list *dev_head,
+ 				if (thedev != dev_tmp->device)
+ 					continue;
+ 
+-				/* check the paths match */
+-				if (readlink(filepath, real_filepath, PATH_MAX-1) < 0) {
+-				    if (strncmp(dev_tmp->name->filename, filepath, strlen(dev_tmp->name->filename)) != 0)
+-					continue;
+-				} else {
+-				    if (strncmp(dev_tmp->name->filename, real_filepath, strlen(dev_tmp->name->filename)) != 0)
+-					continue;
++				/* check the paths match if it is not a block device */
++				if (! S_ISBLK(dev_tmp->name->st.st_mode)) {
++				    if (readlink(filepath, real_filepath, PATH_MAX-1) < 0) {
++					if (strncmp(dev_tmp->name->filename, filepath, strlen(dev_tmp->name->filename)) != 0)
++					    continue;
++				    } else {
++					if (strncmp(dev_tmp->name->filename, real_filepath, strlen(dev_tmp->name->filename)) != 0)
++					    continue;
++				    }
+ 				}
+ 				if (access == ACCESS_FILE
+ 				    && (lstat(filepath, &lst) == 0)
+-- 
+1.8.3.1
+
