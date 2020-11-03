@@ -1,0 +1,38 @@
+From 8fcc64ab2ca67bc46bdee8d7b50c6c6b9eb09318 Mon Sep 17 00:00:00 2001
+From: Craig Small <csmall@dropbear.xyz>
+Date: Mon, 2 Mar 2020 22:00:25 +1100
+Subject: [PATCH 10/20] pstree: minor snprintf fix
+
+The referenced commit used size_t as a return value for
+snprintf.
+
+Coverity found the negative check against size_t but the real
+problem was using size_t in the first place as an error
+returned by snprintf would never be detected.
+
+References:
+ commit 5e510d1c9ed8cb61f9c504076a7c4828624b8b07
+ Coverity #288526
+
+https://gitlab.com/psmisc/psmisc/-/commit/8fcc64ab2ca67bc46bdee8d7b50c6c6b9eb09318
+---
+ src/pstree.c | 3 +--
+ 1 file changed, 1 insertion(+), 2 deletions(-)
+
+diff --git a/src/pstree.c b/src/pstree.c
+index c448539..da02564 100644
+--- a/src/pstree.c
++++ b/src/pstree.c
+@@ -935,8 +935,7 @@ static char* get_threadname(const pid_t pid, const int tid, const char *comm)
+     FILE *file;
+     char *thread_comm, *endcomm, *threadname;
+     char *path = NULL;
+-    size_t len = 0;
+-    int nbytes;
++    int len, nbytes;
+     char readbuf[BUFSIZ + 1];
+ 
+     if (! (threadname = malloc(COMM_LEN + 2 + 1))) {
+-- 
+2.22.0.windows.1
+
