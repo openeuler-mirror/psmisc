@@ -1,11 +1,11 @@
 Name: psmisc
 Version: 23.3
-Release: 2
+Release: 3
 Summary: Utilities for managing processes on your system
 License: GPLv2+
 URL: https://gitlab.com/psmisc/psmisc
 Source0: https://sourceforge.net/projects/%{name}/files/%{name}/%{name}-%{version}.tar.xz
-BuildRequires: libselinux-devel gettext ncurses-devel autoconf automake gcc git
+BuildRequires: libselinux-devel gettext ncurses-devel autoconf automake gcc 
 
 Patch0000: backport-0001-pstree-do-not-crash-on-missing-proc-xxxx-directory.patch
 Patch0001: backport-0002-pstree-additional-for-do-not-crash-on-missing-proces.patch
@@ -26,7 +26,7 @@ filesystem. We're not about changing the world, but providing the system
 administrator with some help in common tasks.
 
 %prep
-%autosetup -n %{name}-%{version} -p1 -Sgit
+%autosetup -n %{name}-%{version} -p1
 
 %build
 %configure --prefix=%{_prefix} --enable-selinux
@@ -46,6 +46,9 @@ mv $RPM_BUILD_ROOT%{_bindir}/fuser $RPM_BUILD_ROOT%{_sbindir}
 %doc AUTHORS ChangeLog README
 
 %changelog
+* Fri Jul 30 2021 chenyanpanHW <chenyanpan@huawei.com> - 23.3-3
+- DESC: delete -Sgit from %autosetup, and delete BuildRequires git
+
 * Thu Nov 03 2020 xinghe <xinghe1@huawei.com> - 23.3-2
 - sync patchs
 
