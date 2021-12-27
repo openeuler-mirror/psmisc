@@ -1,24 +1,11 @@
 Name: psmisc
-Version: 23.3
-Release: 2
+Version: 23.4
+Release: 1
 Summary: Utilities for managing processes on your system
 License: GPLv2+
 URL: https://gitlab.com/psmisc/psmisc
 Source0: https://sourceforge.net/projects/%{name}/files/%{name}/%{name}-%{version}.tar.xz
-BuildRequires: libselinux-devel gettext ncurses-devel autoconf automake gcc git
-
-Patch0000: backport-0001-pstree-do-not-crash-on-missing-proc-xxxx-directory.patch
-Patch0001: backport-0002-pstree-additional-for-do-not-crash-on-missing-proces.patch
-Patch0002: backport-0003-killall-minor-str-length-changes.patch
-Patch0003: backport-0004-pstree-minor-snprintf-fix.patch
-Patch0004: backport-0005-peekfd-Check-return-value-of-malloc.patch
-Patch0005: backport-0006-fuser-free-local-port-before-return.patch
-Patch0006: backport-0007-peekfd-exit-after-perror.patch
-Patch0007: backport-0008-pstree-consecutive-NULs-in-cmdline-args-wrongly-pars.patch
-Patch0008: backport-0009-fuser-Less-confused-about-duplicate-dev_id.patch
-Patch0009: backport-0010-fuser-Check-pathname-only-on-non-block-devices.patch
-
-Patch9001: bugfix-fix-pstree-coredump-due-pid-reuse.patch
+BuildRequires: libselinux-devel gettext ncurses-devel autoconf automake gcc 
 
 %description
 This PSmisc package is a set of some small useful utilities that use the proc
@@ -26,7 +13,7 @@ filesystem. We're not about changing the world, but providing the system
 administrator with some help in common tasks.
 
 %prep
-%autosetup -n %{name}-%{version} -p1 -Sgit
+%autosetup -n %{name}-%{version} -p1
 
 %build
 %configure --prefix=%{_prefix} --enable-selinux
@@ -36,7 +23,7 @@ administrator with some help in common tasks.
 %make_install
 mkdir -p $RPM_BUILD_ROOT%{_sbindir}
 mv $RPM_BUILD_ROOT%{_bindir}/fuser $RPM_BUILD_ROOT%{_sbindir}
-%find_lang %name
+%find_lang %name --all-name --with-man
 
 %files -f %{name}.lang
 %{_sbindir}/fuser
@@ -46,6 +33,12 @@ mv $RPM_BUILD_ROOT%{_bindir}/fuser $RPM_BUILD_ROOT%{_sbindir}
 %doc AUTHORS ChangeLog README
 
 %changelog
+* Wed Dec 22 2021 zhouwenpei <zhouwenpei1@huawei.com> - 23.4-1
+- upgrade to 23.4
+
+* Fri Jul 30 2021 chenyanpanHW <chenyanpan@huawei.com> - 23.3-3
+- DESC: delete -Sgit from %autosetup, and delete BuildRequires git
+
 * Thu Nov 03 2020 xinghe <xinghe1@huawei.com> - 23.3-2
 - sync patchs
 
