@@ -39,7 +39,7 @@ mv $RPM_BUILD_ROOT%{_bindir}/fuser $RPM_BUILD_ROOT%{_sbindir}
 * Fri Jul 30 2021 chenyanpanHW <chenyanpan@huawei.com> - 23.3-3
 - DESC: delete -Sgit from %autosetup, and delete BuildRequires git
 
-* Thu Nov 03 2020 xinghe <xinghe1@huawei.com> - 23.3-2
+* Tue Nov 03 2020 xinghe <xinghe1@huawei.com> - 23.3-2
 - sync patchs
 
 * Thu Jul 16 2020 jinzhimin <jinzhimin2@huawei.com> - 23.3-1
