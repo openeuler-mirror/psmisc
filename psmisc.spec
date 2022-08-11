@@ -1,10 +1,13 @@
 Name: psmisc
 Version: 23.4
-Release: 1
+Release: 2
 Summary: Utilities for managing processes on your system
 License: GPLv2+
 URL: https://gitlab.com/psmisc/psmisc
 Source0: https://sourceforge.net/projects/%{name}/files/%{name}/%{name}-%{version}.tar.xz
+
+Patch6000: backport-patch-fix-checking-truncated-process-names.patch 
+
 BuildRequires: libselinux-devel gettext ncurses-devel autoconf automake gcc 
 
 %description
@@ -33,6 +36,9 @@ mv $RPM_BUILD_ROOT%{_bindir}/fuser $RPM_BUILD_ROOT%{_sbindir}
 %doc AUTHORS ChangeLog README
 
 %changelog
+* Thu Aug 11 2022 liutie <liutie4@huawei.com> - 23.4-2
+- Fix checking truncated process names
+
 * Thu Dec 2 2021 zhouwenpei <zhouwenpei1@huawei.com> - 23.4-1
 - upgrade to 23.4
 
